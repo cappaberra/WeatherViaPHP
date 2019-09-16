@@ -27,35 +27,32 @@
 	// start of code
 
 	if(isset($wuAPI) && isset($wuID) && isset($pwsID) && isset($psw)){
-		
-		$wuData = file_get_contents('http://api.wunderground.com/api/' . $wuAPI . '/conditions/q/pws:' .$wuID . '.json');
+		$wuData = file_get_contents('https://api.weather.com/v2/pws/observations/current?stationId='.$wuID.'&format=json&units=e&apiKey='.$wuAPI);
 		$data = json_decode($wuData,true);
-		
-		
-		if(isset($data['current_observation'])){
 
-			$date = new DateTime("@" . $data['current_observation']['observation_epoch']);
-			
-			$delta = time() - $data['current_observation']['observation_epoch'];
-			
+
+        if(isset($data['observations'])){
+			$date = new DateTime("@" . $data['observations'][0]['epoch']);
+
+			$delta = time() - $data['observations'][0]['epoch'];
+
 			if($delta > 2000){ // to get rid of old data spikes
-				
+
 				echo("The data from ".$delta." seconds ago was too old for trasfer, will retry on next attempt");
-				
+
 			} else {
 				$url = "http://www.pwsweather.com/pwsupdate/pwsupdate.php?ID=". $pwsID ."&PASSWORD=". urlencode($psw) ."&dateutc=" . $date->format('Y-m-d+H:i:s') .
-					($data['current_observation']['wind_degrees'] >= 0 ? "&winddir=" . $data['current_observation']['wind_degrees'] : '' ) . 
-					($data['current_observation']['wind_mph'] >= 0 ? "&windspeedmph=" . $data['current_observation']['wind_mph'] : '' ) . 
-					($data['current_observation']['wind_gust_mph'] >= 0 ? "&windgustmph=". $data['current_observation']['wind_gust_mph'] : "" ) .  
+					($data['observations'][0]['winddir'] >= 0 ? "&winddir=" . $data['observations'][0]['wind_degrees'] : '' ) .
+					($data['observations'][0]['imperial']['windSpeed'] >= 0 ? "&windspeedmph=" . $data['observations'][0]['imperial']['windSpeed'] : '' ) .
+					($data['observations'][0]['imperial']['windGust'] >= 0 ? "&windgustmph=". $data['observations'][0]['imperial']['windGust'] : "" ) .
 					// I would be impressed if anyone recorded temperatures close to absolute zero.
-					($data['current_observation']['temp_f'] > -459 ? "&tempf=" . $data['current_observation']['temp_f'] : "" ) . 
-					($data['current_observation']['precip_1hr_in'] >= 0 ? "&rainin=" . $data['current_observation']['precip_1hr_in']  : "" ) . 
-					($data['current_observation']['precip_today_in'] >= 0 ? "&dailyrainin=" . $data['current_observation']['precip_today_in'] : "" ) . 
-					($data['current_observation']['pressure_in'] >= 0 ? "&baromin=" . $data['current_observation']['pressure_in']  : "" ) . 
-					($data['current_observation']['dewpoint_f'] > -100 ? "&dewptf=" . $data['current_observation']['dewpoint_f']  : "" ) . 
-					(substr($data['current_observation']['relative_humidity'], 0, 1) <> '-' ? "&humidity=" . substr($data['current_observation']['relative_humidity'], 0, -1)  : "" ) . 
+					($data['observations'][0]['imperial']['temp'] > -459 ? "&tempf=" . $data['observations'][0]['imperial']['temp'] : "" ) .
+					($data['observations'][0]['imperial']['precipRate'] >= 0 ? "&rainin=" . $data['observations'][0]['imperial']['precipRate']  : "" ) .
+					($data['observations'][0]['imperial']['precipTotal'] >= 0 ? "&dailyrainin=" . $data['observations'][0]['imperial']['precipTotal'] : "" ) .
+					($data['observations'][0]['imperial']['pressure'] >= 0 ? "&baromin=" . $data['observations'][0]['imperial']['pressure']  : "" ) .
+					($data['observations'][0]['imperial']['dewpt'] > -100 ? "&dewptf=" . $data['observations'][0]['imperial']['dewpt']  : "" ) .
+					($data['observations'][0]['humidity'] <> '-' ? "&humidity=" . $data['observations'][0]['humidity']  : "" ) .
 						"&softwaretype=ebviaphpV0.3&action=updateraw";
-			
 				
 				
 				$pwsdata =  file_get_contents($url);
